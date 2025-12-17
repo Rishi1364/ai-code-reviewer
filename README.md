@@ -75,7 +75,7 @@ TO clone the project , follow this steps.
 ```
 - Create a ``` .env ``` file inside server and add your credentials:
 ```bash
-  GEMINI_API_KEY="YOUR_API_KEY_HERE"
+  GEMINI_API_KEY=YOUR_API_KEY_HERE
   PORT=5000
 ```
 - Start the backend server:
