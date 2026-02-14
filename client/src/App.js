@@ -1,16 +1,17 @@
-import Editor from "@monaco-editor/react";
-import ProfileDropdown from './components/ProfileDropdown';
-import HistoryPanel from './components/HistoryPanel';
-import { FaGoogle, FaSignOutAlt } from "react-icons/fa";
-import { FaHistory } from "react-icons/fa"; // Add FaHistory to your existing icons import
-import { collection, addDoc } from 'firebase/firestore';
-import ShareModal from './components/ShareModal';
-import { FaShareAlt } from 'react-icons/fa'; // Import Share Icon
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
+
+// --- EDITORS ---
+import Editor from "@monaco-editor/react";
 import CodeEditor from "@uiw/react-textarea-code-editor";
+
+// --- ICONS ---
 import {
+  FaGoogle,
+  FaSignOutAlt,
+  FaHistory,
+  FaShareAlt,
   FaCode,
   FaBolt,
   FaWrench,
@@ -22,14 +23,22 @@ import {
   FaLinkedin,
   FaGithub,
 } from "react-icons/fa";
-import "./App.css";
 
-// --- IMPORT AUTH COMPONENTS ---
-import Login from "./components/Auth/Login"; // Make sure this file exists in src/Auth/Login.js
+// --- FIREBASE ---
+import { collection, addDoc } from 'firebase/firestore';
 import { auth, logout, signInWithGoogle, db } from './firebase';
 import { onAuthStateChanged } from "firebase/auth";
-// const [showHistory, setShowHistory] = useState(false);
+
+// --- COMPONENTS ---
+import ProfileDropdown from './components/ProfileDropdown';
+import HistoryPanel from './components/HistoryPanel';
+import ShareModal from './components/ShareModal';
+import Login from "./components/Auth/Login";
+
+// --- STYLES ---
+import "./App.css";
 function App() {
+
 
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
@@ -37,6 +46,22 @@ function App() {
 
   const [isShareOpen, setIsShareOpen] = useState(false);
 
+  // const [code, setCode] = useState(`// Paste your code here...`);
+  // ... other states ...
+
+  /// --- LISTENS FOR SHARED CODE IN URL ---
+  useEffect(() => {
+    // 1. Check if there is ?code=... in the URL
+    const params = new URLSearchParams(window.location.search);
+    const sharedCode = params.get('code');
+
+    // 2. If found, update the editor
+    if (sharedCode) {
+      setCode(sharedCode);
+      // Optional: Clean the URL back to normal
+      window.history.replaceState({}, document.title, "/");
+    }
+  }, []);
   // ---------------------------------------------------------------
   // 1. ALL STATE VARIABLES (MUST BE AT THE TOP)
   // ---------------------------------------------------------------
