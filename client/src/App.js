@@ -1,236 +1,528 @@
-// Main React component for the AI Code Reviewer UI.
-// - Left panel: code input, language selectors, action buttons.
-// - Right panel: displays review, fixed code, complexity analysis, docs, or conversion.
-// - Uses a small set of API endpoints on the server (http://localhost:5000/api/*).
+import Editor from "@monaco-editor/react";
+import ProfileDropdown from './components/ProfileDropdown';
+import HistoryPanel from './components/HistoryPanel';
+import { FaGoogle, FaSignOutAlt } from "react-icons/fa";
+import { FaHistory } from "react-icons/fa"; // Add FaHistory to your existing icons import
+import { collection, addDoc } from 'firebase/firestore';
+import ShareModal from './components/ShareModal';
+import { FaShareAlt } from 'react-icons/fa'; // Import Share Icon
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import CodeEditor from "@uiw/react-textarea-code-editor";
+import {
+  FaCode,
+  FaBolt,
+  FaWrench,
+  FaSun,
+  FaMoon,
+  FaChartLine,
+  FaFileAlt,
+  FaSyncAlt,
+  FaLinkedin,
+  FaGithub,
+} from "react-icons/fa";
+import "./App.css";
 
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import ReactMarkdown from 'react-markdown';
-import { FaCode, FaBolt, FaWrench, FaSun, FaMoon, FaChartLine, FaFileAlt, FaSyncAlt, FaLinkedin, FaGithub } from 'react-icons/fa';
-import CodeEditor from '@uiw/react-textarea-code-editor';
-import './App.css';
-
+// --- IMPORT AUTH COMPONENTS ---
+import Login from "./components/Auth/Login"; // Make sure this file exists in src/Auth/Login.js
+import { auth, logout, signInWithGoogle, db } from './firebase';
+import { onAuthStateChanged } from "firebase/auth";
+// const [showHistory, setShowHistory] = useState(false);
 function App() {
-    // --- UI theme (dark/light) ---
-    // Persists to localStorage so the user's preference is preserved.
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
 
-    // --- Code content and outputs from server ---
-    const [code, setCode] = useState(''); // User input code
-    const [review, setReview] = useState(''); // Markdown review from AI
-    const [fixedCode, setFixedCode] = useState(''); // Fixed code returned from AI
-    const [complexityAnalysis, setComplexityAnalysis] = useState(''); // Complexity markdown
-    const [documentation, setDocumentation] = useState(''); // Generated documentation
-    const [convertedCode, setConvertedCode] = useState(''); // Language-converted code
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
-    // --- Language selectors for conversion ---
-    const [sourceLanguage, setSourceLanguage] = useState('JavaScript');
-    const [targetLanguage, setTargetLanguage] = useState('Python');
+  const [showHistory, setShowHistory] = useState(false);
 
-    // --- UI state ---
-    const [isLoading, setIsLoading] = useState(false); // Shows "Working on it..." state
-    const [error, setError] = useState(''); // Holds server-side error messages
-    const [activeView, setActiveView] = useState('placeholder'); // 'review'|'fix'|'complexity'|'document'|'convert'|'error'
-    const [copyButtonText, setCopyButtonText] = useState('Copy'); // Temporary button text when copying
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
-    // Supported languages in the dropdowns.
-    const languages = ['JavaScript', 'Python', 'Java', 'C++', 'Go', 'TypeScript', 'Ruby', 'PHP'];
+  // ---------------------------------------------------------------
+  // 1. ALL STATE VARIABLES (MUST BE AT THE TOP)
+  // ---------------------------------------------------------------
 
-    // Toggle theme and persist choice.
-    const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+  // --- Auth State ---
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    // Apply theme to body and save preference on change.
-    useEffect(() => {
-        document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-    }, [theme]);
+  // --- UI Theme ---
+  const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
 
-    // --- Copy to clipboard helper ---
-    // Copies the currently visible output (review/fix/complexity/document/convert).
-    const handleCopy = () => {
-        const contentToCopy =
-            activeView === 'review' ? review :
-                activeView === 'fix' ? fixedCode :
-                    activeView === 'complexity' ? complexityAnalysis :
-                        activeView === 'document' ? documentation :
-                            convertedCode;
+  // --- Code & API Outputs ---
+  const [code, setCode] = useState("// Paste your code here...");
+  const [review, setReview] = useState("");
+  const [fixedCode, setFixedCode] = useState("");
+  const [complexityAnalysis, setComplexityAnalysis] = useState("");
+  const [documentation, setDocumentation] = useState("");
+  const [convertedCode, setConvertedCode] = useState("");
 
-        if (contentToCopy) {
-            const textarea = document.createElement('textarea');
-            textarea.value = contentToCopy;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy'); // legacy but works in many browsers
-            document.body.removeChild(textarea);
+  // --- Language Selectors ---
+  const [sourceLanguage, setSourceLanguage] = useState("JavaScript");
+  const [targetLanguage, setTargetLanguage] = useState("Python");
 
-            // Provide quick feedback to the user.
-            setCopyButtonText('Copied!');
-            setTimeout(() => setCopyButtonText('Copy'), 2000);
-        }
-    };
+  // --- UI Status ---
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [activeView, setActiveView] = useState("placeholder");
+  const [copyButtonText, setCopyButtonText] = useState("Copy");
 
-    // --- Generic API request helper ---
-    // endpoint: path suffix after /api/ (e.g., 'review', 'fix', 'convert')
-    // payload: object to send as JSON body
-    // viewName: used for setting activeView and error messages
-    // successCallback: function called with response.data to update local state
-    const handleApiRequest = async (endpoint, payload, viewName, successCallback) => {
-        if (!code.trim()) {
-            // Basic client-side validation: require code before calling server.
-            setError('Please enter some code to analyze.');
-            setActiveView('error');
-            return;
-        }
+  // ---------------------------------------------------------------
+  // 2. USE EFFECTS (LISTENERS)
+  // ---------------------------------------------------------------
 
-        // Reset UI state for a fresh request.
-        setIsLoading(true);
-        setError('');
-        setReview('');
-        setFixedCode('');
-        setComplexityAnalysis('');
-        setDocumentation('');
-        setConvertedCode('');
-        setCopyButtonText('Copy');
-        setActiveView(viewName);
+  // Check Login Status on Start
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  // Persist Theme Selection
+  useEffect(() => {
+    document.body.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  // ---------------------------------------------------------------
+  // 3. HELPER FUNCTIONS
+  // ---------------------------------------------------------------
+
+  const languages = [
+    "JavaScript",
+    "Python",
+    "Java",
+    "C++",
+    "Go",
+    "TypeScript",
+    "Ruby",
+    "PHP",
+  ];
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+
+  const handleCopy = () => {
+    const contentToCopy =
+      activeView === "review"
+        ? review
+        : activeView === "fix"
+          ? fixedCode
+          : activeView === "complexity"
+            ? complexityAnalysis
+            : activeView === "document"
+              ? documentation
+              : convertedCode;
+
+    if (contentToCopy) {
+      navigator.clipboard.writeText(contentToCopy); // Modern copy method
+      setCopyButtonText("Copied!");
+      setTimeout(() => setCopyButtonText("Copy"), 2000);
+    }
+  };
+
+  const loadHistoryItem = (item) => {
+    setCode(item.code);
+    setReview(item.review);
+    setActiveView("review"); // Switch view to show the review
+    setShowHistory(false);   // Close the sidebar
+  };
+
+  //  --- REPLACEMENT FUNCTION START ---
+  const handleApiRequest = async (endpoint, payload, viewName, successCallback) => {
+    // 1. Basic Validation
+    if (!code.trim()) {
+      setError("Please enter some code to analyze.");
+      setActiveView("error");
+      return;
+    }
+
+    // 2. Reset UI State
+    setIsLoading(true);
+    setError("");
+    setActiveView(viewName);
+
+    try {
+      // 3. Call the Server (AI)
+      const response = await axios.post(`http://localhost:5000/api/${endpoint}`, payload);
+
+      // 4. Update the Screen with Results
+      successCallback(response.data);
+
+      // 5. --- NEW: AUTO-SAVE TO DATABASE ---
+      // We only save if:
+      // A) The user is logged in (user exists)
+      // B) The action was a "review" (we don't need to save simple conversions)
+      if (user && viewName === "review") {
         try {
-            // POST to the local server endpoint, expect JSON response.
-            const response = await axios.post(`http://localhost:5000/api/${endpoint}`, payload);
-            // Let caller update appropriate state with response.data
-            successCallback(response.data);
-        } catch (err) {
-            // Surface server-provided error message if available.
-            const errorMessage = err.response?.data?.error || `Failed to fetch ${viewName}.`;
-            setError(errorMessage);
-            setActiveView('error');
-        } finally {
-            setIsLoading(false);
+          await addDoc(collection(db, "history"), {
+            uid: user.uid,              // User's ID
+            code: code,                 // The Code they wrote
+            review: response.data.review, // The AI's answer
+            timestamp: new Date()       // Current Time
+          });
+          console.log("✅ History saved successfully!");
+        } catch (e) {
+          console.error("❌ Error saving history:", e);
         }
-    };
+      }
+      // -------------------------------------
 
-    // --- Render logic for the right-hand panel ---
-    // Displays markdown or code editor depending on active view.
-    const renderRightPanelContent = () => {
-        if (isLoading) return <div className="placeholder-content">Working on it...</div>;
-        if (activeView === 'error') return <div className="placeholder-content error-message">{error}</div>;
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || `Failed to fetch ${viewName}.`;
+      setError(errorMessage);
+      setActiveView("error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // --- REPLACEMENT FUNCTION END ---
 
-        const markdownContent =
-            activeView === 'review' ? review :
-                activeView === 'complexity' ? complexityAnalysis :
-                    activeView === 'document' ? documentation : null;
+  const renderRightPanelContent = () => {
+    if (isLoading)
+      return <div className="placeholder-content">Working on it...</div>;
+    if (activeView === "error")
+      return <div className="placeholder-content error-message">{error}</div>;
 
-        if (markdownContent) {
-            // Wrap ReactMarkdown in a styled container rather than passing className directly.
-            // ReactMarkdown renders markdown (headings, lists, code blocks).
-            return (
-                <div className="review-output">
-                    <ReactMarkdown>
-                        {markdownContent}
-                    </ReactMarkdown>
-                </div>
-            );
-        }
+    if (
+      activeView === "review" ||
+      activeView === "complexity" ||
+      activeView === "document"
+    ) {
+      const content =
+        activeView === "review"
+          ? review
+          : activeView === "complexity"
+            ? complexityAnalysis
+            : documentation;
+      if (content)
+        return (
+          <div className="review-output">
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
+        );
+    }
 
-        if (activeView === 'fix' && fixedCode) {
-            // Show fixed code in a read-only code editor.
-            return <CodeEditor value={fixedCode} language={sourceLanguage.toLowerCase()} data-color-mode={theme} padding={15} readOnly style={{ flexGrow: 1, fontFamily: "'Fira Code', 'Courier New', monospace", fontSize: '0.95rem' }} />;
-        }
-        if (activeView === 'convert' && convertedCode) {
-            // Show converted code in a read-only code editor, using targetLanguage for syntax highlighting.
-            return <CodeEditor value={convertedCode} language={targetLanguage.toLowerCase()} data-color-mode={theme} padding={15} readOnly style={{ flexGrow: 1, fontFamily: "'Fira Code', 'Courier New', monospace", fontSize: '0.95rem' }} />;
-        }
-        // Default placeholder when nothing has been triggered yet.
-        return <div className="placeholder-content"><FaBolt /><p>Run an analysis to see the results here.</p></div>;
-    };
+    if (activeView === "fix" && fixedCode) {
+      return (
+        <CodeEditor
+          value={fixedCode}
+          language={sourceLanguage.toLowerCase()}
+          data-color-mode={theme}
+          padding={15}
+          readOnly
+          style={{ flexGrow: 1, fontFamily: "monospace" }}
+        />
+      );
+    }
+    if (activeView === "convert" && convertedCode) {
+      return (
+        <CodeEditor
+          value={convertedCode}
+          language={targetLanguage.toLowerCase()}
+          data-color-mode={theme}
+          padding={15}
+          readOnly
+          style={{ flexGrow: 1, fontFamily: "monospace" }}
+        />
+      );
+    }
 
-    // Choose title and icon of right panel based on active view.
-    const getPanelTitle = () => {
-        switch (activeView) {
-            case 'review': return { icon: <FaBolt />, text: 'Analysis Results' };
-            case 'fix': return { icon: <FaWrench />, text: 'Corrected Code' };
-            case 'complexity': return { icon: <FaChartLine />, text: 'Complexity Analysis' };
-            case 'document': return { icon: <FaFileAlt />, text: 'Generated Documentation' };
-            case 'convert': return { icon: <FaSyncAlt />, text: `Converted Code (${targetLanguage})` };
-            default: return { icon: <FaBolt />, text: 'Analysis Results' };
-        }
-    };
-    const { icon, text } = getPanelTitle();
-
-    // --- JSX: UI layout ---
     return (
-        <div className="App">
-            <header className="App-header">
-                {/* Theme toggle button */}
-                <button onClick={toggleTheme} className="theme-toggle-button">
-                    {theme === 'dark' ? <FaSun /> : <FaMoon />}
-                </button>
-                <h1>🤖 AI Code Reviewer</h1>
-                <p>Not just a code reviewer : but your smartest development partner </p>
-            </header>
-
-            <main className="main-content">
-                {/* Left panel: code input, language selectors, action buttons */}
-                <div className="panel">
-                    <h2 className="panel-title"><FaCode /> Code Input</h2>
-
-                    {/* Language dropdowns for conversions */}
-                    <div className="language-selectors">
-                        <div>
-                            <label htmlFor="source-lang">From</label>
-                            <select id="source-lang" value={sourceLanguage} onChange={e => setSourceLanguage(e.target.value)}>
-                                {languages.map(lang => <option key={lang} value={lang}>{lang}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label htmlFor="target-lang">To</label>
-                            <select id="target-lang" value={targetLanguage} onChange={e => setTargetLanguage(e.target.value)}>
-                                {languages.map(lang => <option key={lang} value={lang}>{lang}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Main code editor where user pastes code */}
-                    <div className="code-editor-container">
-                        <CodeEditor value={code} language={sourceLanguage.toLowerCase()} placeholder="Paste your code here..." onChange={(e) => setCode(e.target.value)} data-color-mode={theme} padding={15} style={{ height: '100%', width: '100%', fontFamily: "'Fira Code', 'Courier New', monospace", fontSize: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
-                    </div>
-
-                    {/* Action buttons that call the server endpoints */}
-                    <div className="button-group">
-                        <button onClick={() => handleApiRequest('review', { code }, 'review', data => setReview(data.review))} disabled={isLoading} className="analyze-button"><FaBolt /> Review</button>
-                        <button onClick={() => handleApiRequest('fix', { code }, 'fix', data => setFixedCode(data.fixedCode))} disabled={isLoading} className="analyze-button secondary-button"><FaWrench /> Fix</button>
-                        <button onClick={() => handleApiRequest('complexity', { code }, 'complexity', data => setComplexityAnalysis(data.analysis))} disabled={isLoading} className="analyze-button tertiary-button"><FaChartLine /> Complexity</button>
-                        <button onClick={() => handleApiRequest('document', { code }, 'document', data => setDocumentation(data.documentation))} disabled={isLoading} className="analyze-button quaternary-button"><FaFileAlt /> Write Docs</button>
-                        <button onClick={() => handleApiRequest('convert', { code, sourceLanguage, targetLanguage }, 'convert', data => setConvertedCode(data.convertedCode))} disabled={isLoading} className="analyze-button quinary-button"><FaSyncAlt /> Convert</button>
-                    </div>
-                </div>
-
-                {/* Right panel: results */}
-                <div className="panel">
-                    <h2 className="panel-title">{icon} {text}</h2>
-                    {/* Show copy button when there is output and not loading */}
-                    {(review || fixedCode || complexityAnalysis || documentation || convertedCode) && !isLoading && (<button onClick={handleCopy} className="copy-button">{copyButtonText}</button>)}
-                    <div className="right-panel-content">
-                        {renderRightPanelContent()}
-                    </div>
-                </div>
-            </main>
-
-            {/* Footer with author links */}
-            <footer className="App-footer">
-                <p>
-                    Developed by Prashik :
-                    <a href="https://www.linkedin.com/in/prashik-wasnik/" target="_blank" rel="noopener noreferrer">
-                        <FaLinkedin /> Prashik Wasnik
-                    </a>
-                    <span className="footer-separator">|</span>
-                    <a href="https://github.com/prashik-54" target="_blank" rel="noopener noreferrer">
-                        <FaGithub /> Prashik-54
-                    </a>
-                </p>
-            </footer>
-        </div>
+      <div className="placeholder-content">
+        <FaBolt />
+        <p>Run an analysis to see the results here.</p>
+      </div>
     );
+  };
+
+  const getPanelTitle = () => {
+    switch (activeView) {
+      case "review":
+        return { icon: <FaBolt />, text: "Analysis Results" };
+      case "fix":
+        return { icon: <FaWrench />, text: "Corrected Code" };
+      case "complexity":
+        return { icon: <FaChartLine />, text: "Complexity Analysis" };
+      case "document":
+        return { icon: <FaFileAlt />, text: "Generated Documentation" };
+      case "convert":
+        return {
+          icon: <FaSyncAlt />,
+          text: `Converted Code (${targetLanguage})`,
+        };
+      default:
+        return { icon: <FaBolt />, text: "Analysis Results" };
+    }
+  };
+  const { icon, text } = getPanelTitle();
+
+  // ---------------------------------------------------------------
+  // 4. THE GATES (MUST BE AFTER HOOKS)
+  // ---------------------------------------------------------------
+
+  if (loading)
+    return (
+      <div style={{ color: "white", textAlign: "center", marginTop: "20%" }}>
+        Loading...
+      </div>
+    );
+  // if (!user) return <Login />;
+
+  // ---------------------------------------------------------------
+  // 5. THE MAIN APP UI
+  // ---------------------------------------------------------------
+  return (
+    <div className={`App ${theme}`}>
+      <header className="App-header">
+
+        {/* Left Side: Title */}
+        <h1 className="app-title">🤖 AI Code Reviewer</h1>
+
+        {/* Right Side: Navigation Group */}
+        <div className="header-right">
+
+          {/* History & Logout (Only if logged in) */}
+          {user && (
+            <>
+              <button
+                className="nav-btn share-btn-gradient"
+                onClick={() => setIsShareOpen(true)}
+              >
+                <FaShareAlt /> Share
+
+              </button>
+              <button onClick={() => setShowHistory(true)} className="nav-btn history-btn">
+                <FaHistory /> History
+              </button>
+
+              <button onClick={logout} className="nav-btn logout-btn">
+                <FaSignOutAlt /> Logout
+              </button>
+            </>
+          )}
+
+          {/* Theme Toggle */}
+          <button onClick={toggleTheme} className="theme-btn" aria-label="Toggle Theme">
+            {theme === "dark" ? <FaSun /> : <FaMoon />}
+          </button>
+
+          {/* Profile Section */}
+          {user ? (
+            <div className="profile-container">
+              <img
+                src={user.photoURL || "https://ui-avatars.com/api/?background=random"}
+                alt="Profile"
+                className="profile-pic"
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                title={user.displayName}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://ui-avatars.com/api/?name=" + user.email + "&background=random&color=fff";
+                }}
+              />
+
+              {showProfileDropdown && (
+                <ProfileDropdown
+                  user={user}
+                  onClose={() => setShowProfileDropdown(false)}
+                  onLogout={logout}
+                  onAddAccount={signInWithGoogle}
+                  theme={theme}
+                />
+              )}
+            </div>
+          ) : (
+            <button onClick={signInWithGoogle} className="login-btn">
+              <FaGoogle /> Sign In
+            </button>
+          )}
+
+        </div>
+      </header>
+
+      <main className="main-content">
+        <div className="panel">
+          <h2 className="panel-title">
+            <FaCode /> Code Input
+          </h2>
+
+          <div className="language-selectors">
+            <div>
+              <label htmlFor="source-lang">From</label>
+              <select
+                id="source-lang"
+                value={sourceLanguage}
+                onChange={(e) => setSourceLanguage(e.target.value)}
+              >
+                {languages.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="target-lang">To</label>
+              <select
+                id="target-lang"
+                value={targetLanguage}
+                onChange={(e) => setTargetLanguage(e.target.value)}
+              >
+                {languages.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div
+            className="code-editor-container"
+            style={{
+              height: "100%",
+              width: "100%",
+              borderRadius: "8px",
+              overflow: "hidden",
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            <Editor
+              height="100%"
+              width="100%"
+              language={sourceLanguage.toLowerCase()}
+              value={code}
+              theme={theme === "dark" ? "vs-dark" : "light"}
+              onChange={(value) => setCode(value || "")}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 15,
+                automaticLayout: true,
+                fontFamily: "'Fira Code', 'Courier New', monospace",
+              }}
+            />
+          </div>
+
+          <div className="button-group">
+            <button
+              onClick={() =>
+                handleApiRequest("review", { code }, "review", (data) =>
+                  setReview(data.review),
+                )
+              }
+              disabled={isLoading}
+              className="analyze-button"
+            >
+              <FaBolt /> Review
+            </button>
+            <button
+              onClick={() =>
+                handleApiRequest("fix", { code }, "fix", (data) =>
+                  setFixedCode(data.fixedCode),
+                )
+              }
+              disabled={isLoading}
+              className="analyze-button secondary-button"
+            >
+              <FaWrench /> Fix
+            </button>
+            <button
+              onClick={() =>
+                handleApiRequest("complexity", { code }, "complexity", (data) =>
+                  setComplexityAnalysis(data.analysis),
+                )
+              }
+              disabled={isLoading}
+              className="analyze-button tertiary-button"
+            >
+              <FaChartLine /> Complexity
+            </button>
+            <button
+              onClick={() =>
+                handleApiRequest("document", { code }, "document", (data) =>
+                  setDocumentation(data.documentation),
+                )
+              }
+              disabled={isLoading}
+              className="analyze-button quaternary-button"
+            >
+              <FaFileAlt /> Write Docs
+            </button>
+            <button
+              onClick={() =>
+                handleApiRequest(
+                  "convert",
+                  { code, sourceLanguage, targetLanguage },
+                  "convert",
+                  (data) => setConvertedCode(data.convertedCode),
+                )
+              }
+              disabled={isLoading}
+              className="analyze-button quinary-button"
+            >
+              <FaSyncAlt /> Convert
+            </button>
+          </div>
+        </div>
+
+        <div className="panel">
+          <h2 className="panel-title">
+            {icon} {text}
+          </h2>
+          {(review ||
+            fixedCode ||
+            complexityAnalysis ||
+            documentation ||
+            convertedCode) &&
+            !isLoading && (
+              <button onClick={handleCopy} className="copy-button">
+                {copyButtonText}
+              </button>
+            )}
+          <div className="right-panel-content">{renderRightPanelContent()}</div>
+        </div>
+      </main>
+
+      <footer className="App-footer">
+        <p>
+          Developed by Rushikesh :{" "}
+          <a
+            href="https://www.linkedin.com/feed/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <FaLinkedin /> Rushikesh Kale
+          </a>{" "}
+          <span className="footer-separator">|</span>{" "}
+          <a
+            href="https://github.com/Rishi1364"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <FaGithub /> Rishi1364
+          </a>
+        </p>
+      </footer>
+
+      {/* --- WAIT! ADD THIS PART OR THE HISTORY WON'T OPEN --- */}
+      {showHistory && (
+        <HistoryPanel
+          user={user}
+          onClose={() => setShowHistory(false)}
+          onLoad={loadHistoryItem}
+          theme={theme}//This line make code switch ligh & dark 
+        />
+      )}
+
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        code={code} // Pass your current code state here
+      />
+      {/* --------------------------------------------------- */}
+
+    </div>
+  );
 }
 
 export default App;
-
