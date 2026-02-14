@@ -168,7 +168,7 @@ function App() {
 
     try {
       // 3. Call the Server (AI)
-      const response = await axios.post(`http://localhost:5000/api/${endpoint}`, payload);
+      const response = await axios.post(`https://ai-code-reviewer-2fw5.onrender.com${endpoint}`, payload);
 
       // 4. Update the Screen with Results
       successCallback(response.data);
