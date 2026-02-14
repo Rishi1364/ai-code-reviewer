@@ -13,9 +13,14 @@ const port = process.env.PORT || 5000;
 
 // --- Middleware ---
 // Enable CORS for local development and parse JSON bodies.
+
+app.use(cors({ origin: "https://ai-code-reviewer-21xj.vercel.app" }));
+
 app.use(cors());
 app.use(express.json());
 
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // --- Initialize Google Generative AI ---
 // Create a client using the GEMINI_API_KEY from .env.
 // This client is reused for multiple requests to the AI model.
