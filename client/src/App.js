@@ -33,7 +33,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import ProfileDropdown from './components/ProfileDropdown';
 import HistoryPanel from './components/HistoryPanel';
 import ShareModal from './components/ShareModal';
-import Login from "./components/Auth/Login";
+// import Login from "./components/Auth/Login";
 
 // --- STYLES ---
 import "./App.css";
