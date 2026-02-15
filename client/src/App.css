@@ -586,32 +586,3 @@ body {
     padding-bottom: 20px;
   }
 }
-
-/* Mobile Optimizations */
-@media (max-width: 768px) {
-  /* 1. Stack the boxes vertically */
-  .main-container {
-    flex-direction: column; /* Change from row to column */
-    height: auto; /* Let the height grow as needed */
-    padding: 10px;
-  }
-
-  /* 2. Make the boxes full width */
-  .code-input-box, 
-  .analysis-result-box {
-    width: 100%; /* Take up full phone width */
-    margin-bottom: 20px; /* Add space between them */
-    min-height: 300px; /* Ensure they aren't too small */
-  }
-
-  /* 3. Fix the buttons */
-  .button-container {
-    flex-wrap: wrap; /* Let buttons wrap to the next line if needed */
-    justify-content: center;
-  }
-  
-  button {
-    width: 45%; /* Make buttons bigger on mobile for easy tapping */
-    margin: 5px;
-  }
-}
