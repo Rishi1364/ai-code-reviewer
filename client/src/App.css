@@ -486,24 +486,22 @@ body {
   gap: 5px;
   margin-left: 8px;
 }
-
 /* =========================================
-   9. MOBILE RESPONSIVENESS (MERGED & FINAL)
+   9. MOBILE RESPONSIVENESS (FINAL - RIGHT ALIGNED)
    ========================================= */
 @media (max-width: 900px) {
   
-  /* --- 1. LAYOUT FIXES (From Me) --- */
-  /* This makes the input box big and enables scrolling */
+  /* 1. LAYOUT FIXES */
   .App {
     height: auto !important;
     min-height: 100vh;
-    overflow-y: auto !important; /* Enables scrollbar */
+    overflow-y: auto !important;
     padding: 10px;
   }
 
   .main-content {
     display: flex;
-    flex-direction: column; /* Stacks boxes vertically */
+    flex-direction: column;
     gap: 20px;
     height: auto !important;
   }
@@ -514,73 +512,73 @@ body {
     overflow: visible;
   }
 
-  /* CRITICAL FIX: Forces the code editor to be visible */
+  /* Keep Input Box Big */
   .code-editor-container {
     height: 400px !important; 
     min-height: 400px !important;
     display: block;
   }
 
-  /* --- 2. HEADER ADJUSTMENTS (Mixed) --- */
+  /* 2. HEADER ADJUSTMENTS */
   .App-header {
     flex-direction: column;
     height: auto;
     padding: 10px 5px;
     gap: 10px;
     margin-bottom: 20px;
-    align-items: center; /* Centers the title */
+    align-items: center; 
   }
 
   .app-title {
     font-size: 1.5rem;
     width: 100%;
-    text-align: center; /* Keeps title centered */
+    text-align: center; 
     margin-bottom: 5px;
   }
 
+  /* --- THE FIX: ALIGN BUTTONS TO RIGHT --- */
   .header-right {
     width: 100%;
     display: flex;
-    justify-content: center; /* Centers the button group */
-    gap: 12px; /* Little more space between circles */
+    justify-content: flex-end; /* <--- MOVED TO RIGHT SIDE */
+    gap: 12px;
     flex-wrap: wrap;
-    padding-right: 0;
+    padding-right: 5px; /* Adds a little breathing room from the edge */
   }
 
-  /* --- 3. CIRCLE BUTTONS (From You) --- */
-  /* This turns the buttons back into circles */
+  /* 3. CIRCLE BUTTON STYLES */
   .nav-btn, 
   .share-btn-gradient,
   .history-btn,
   .logout-btn, 
   .login-btn,
   .theme-btn {
-    font-size: 0 !important; /* Hides the text */
+    font-size: 0 !important;
     padding: 0 !important;
-    width: 42px !important;  /* Slightly bigger for easier tapping */
+    width: 42px !important; 
     height: 42px !important;
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 50% !important; /* Makes them round */
+    border-radius: 50% !important; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
   }
 
-  /* Fix Theme Button Visibility */
+  /* Theme Button Fix */
   .theme-btn {
     border: 1px solid var(--border-color) !important;
     background-color: var(--panel-bg-color) !important;
     color: var(--text-primary) !important;
   }
 
-  /* Make Icons Visible & Centered */
+  /* Icons */
   .nav-btn svg, 
   .share-btn-gradient svg, 
   .history-btn svg,
   .logout-btn svg, 
   .login-btn svg,
   .theme-btn svg {
-    font-size: 18px !important; /* Good icon size */
+    font-size: 18px !important; 
     margin: 0 !important;
   }
 
