@@ -486,103 +486,93 @@ body {
   gap: 5px;
   margin-left: 8px;
 }
-
 /* =========================================
-   9. MOBILE RESPONSIVENESS (FINAL)
+   9. MOBILE RESPONSIVENESS (CORRECTED)
    ========================================= */
 @media (max-width: 900px) {
-  
-  /* 1. RESET HEIGHT */
+
+  /* 1. ENABLE SCROLLING (Fixes "cut off" issue) */
   .App {
-    height: auto !important;
+    height: auto !important; /* Unlocks height */
     min-height: 100vh;
-    overflow-y: auto;
+    overflow-y: auto !important; /* Enables scrollbar */
     padding: 10px;
   }
 
+  /* 2. STACK BOXES VERTICALLY */
   .main-content {
-    flex-direction: column;
-    height: auto;
+    display: flex;
+    flex-direction: column; /* Stack top to bottom */
+    gap: 20px;
+    height: auto !important;
   }
-  
+
+  /* 3. FIX INPUT BOX HEIGHT (Crucial for Mobile) */
+  .code-editor-container {
+    height: 400px !important; /* Force a visible height */
+    min-height: 400px !important;
+    display: block; /* Ensures it takes space */
+  }
+
   .panel {
-    min-height: 400px;
+    min-height: auto; /* Let panel grow naturally */
+    height: auto !important;
     overflow: visible;
   }
 
-  /* 2. HEADER ADJUSTMENTS */
+  /* 4. HEADER LAYOUT (Simple & Clean) */
   .App-header {
-    flex-direction: column;
+    flex-direction: column; /* Stack Title and Buttons */
     height: auto;
-    padding: 10px 5px;
-    gap: 10px;
+    gap: 15px;
     margin-bottom: 20px;
-    align-items: flex-start;
+    align-items: center;
+    padding: 10px 0;
   }
 
   .app-title {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
+    text-align: center;
     width: 100%;
-    text-align: left;
-    padding-left: 5px;
+    margin-bottom: 5px;
   }
 
-  /* 3. BUTTONS: MOVE TO RIGHT CORNER */
+  /* 5. BUTTONS (Restored to Normal - No Circles!) */
   .header-right {
     width: 100%;
     display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding-right: 5px;
+    justify-content: center; /* Center buttons */
+    flex-wrap: wrap; /* Allow buttons to wrap to next line */
+    gap: 10px; /* Space between buttons */
   }
 
-  /* 4. CIRCLE BUTTON STYLES */
+  /* Force buttons to look normal (Undo any fancy circle styles) */
   .nav-btn, 
   .share-btn-gradient,
   .history-btn,
   .logout-btn, 
-  .login-btn,
-  .theme-btn {
-    font-size: 0 !important;
-    padding: 0 !important;
-    width: 38px !important;
-    height: 38px !important;
-    display: flex;
-    justify-content: center;
+  .login-btn {
+    width: auto !important; /* Natural width */
+    height: auto !important; /* Natural height */
+    padding: 10px 16px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important; /* Text is visible again */
+    display: flex !important;
     align-items: center;
-    border-radius: 50% !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+    justify-content: center;
   }
 
-  /* Fix Theme Button Visibility */
-  .theme-btn {
-    border: 1px solid var(--border-color) !important;
-    background-color: var(--panel-bg-color) !important;
-    color: var(--text-primary) !important;
-  }
-
-  /* Icon Sizes */
+  /* Ensure Icons are visible */
   .nav-btn svg, 
-  .share-btn-gradient svg, 
-  .history-btn svg,
-  .logout-btn svg, 
-  .login-btn svg,
-  .theme-btn svg {
-    font-size: 15px !important;
-    margin: 0 !important;
+  .share-btn-gradient svg {
+    font-size: 16px !important;
+    margin-right: 6px !important; /* Space between icon and text */
   }
 
-  /* Profile Pic */
-  .profile-pic {
-    width: 38px;
-    height: 38px;
-    border-width: 2px;
-  }
-
-  /* Footer */
+  /* 6. FOOTER ADJUSTMENT */
   .App-footer {
     margin-top: 30px !important;
-    padding-bottom: 20px;
+    padding-bottom: 30px;
+    position: relative;
   }
 }
