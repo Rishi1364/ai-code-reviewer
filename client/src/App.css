@@ -486,93 +486,114 @@ body {
   gap: 5px;
   margin-left: 8px;
 }
+
 /* =========================================
-   9. MOBILE RESPONSIVENESS (CORRECTED)
+   9. MOBILE RESPONSIVENESS (MERGED & FINAL)
    ========================================= */
 @media (max-width: 900px) {
-
-  /* 1. ENABLE SCROLLING (Fixes "cut off" issue) */
+  
+  /* --- 1. LAYOUT FIXES (From Me) --- */
+  /* This makes the input box big and enables scrolling */
   .App {
-    height: auto !important; /* Unlocks height */
+    height: auto !important;
     min-height: 100vh;
     overflow-y: auto !important; /* Enables scrollbar */
     padding: 10px;
   }
 
-  /* 2. STACK BOXES VERTICALLY */
   .main-content {
     display: flex;
-    flex-direction: column; /* Stack top to bottom */
+    flex-direction: column; /* Stacks boxes vertically */
     gap: 20px;
     height: auto !important;
   }
-
-  /* 3. FIX INPUT BOX HEIGHT (Crucial for Mobile) */
-  .code-editor-container {
-    height: 400px !important; /* Force a visible height */
-    min-height: 400px !important;
-    display: block; /* Ensures it takes space */
-  }
-
+  
   .panel {
-    min-height: auto; /* Let panel grow naturally */
+    min-height: auto;
     height: auto !important;
     overflow: visible;
   }
 
-  /* 4. HEADER LAYOUT (Simple & Clean) */
+  /* CRITICAL FIX: Forces the code editor to be visible */
+  .code-editor-container {
+    height: 400px !important; 
+    min-height: 400px !important;
+    display: block;
+  }
+
+  /* --- 2. HEADER ADJUSTMENTS (Mixed) --- */
   .App-header {
-    flex-direction: column; /* Stack Title and Buttons */
+    flex-direction: column;
     height: auto;
-    gap: 15px;
+    padding: 10px 5px;
+    gap: 10px;
     margin-bottom: 20px;
-    align-items: center;
-    padding: 10px 0;
+    align-items: center; /* Centers the title */
   }
 
   .app-title {
     font-size: 1.5rem;
-    text-align: center;
     width: 100%;
+    text-align: center; /* Keeps title centered */
     margin-bottom: 5px;
   }
 
-  /* 5. BUTTONS (Restored to Normal - No Circles!) */
   .header-right {
     width: 100%;
     display: flex;
-    justify-content: center; /* Center buttons */
-    flex-wrap: wrap; /* Allow buttons to wrap to next line */
-    gap: 10px; /* Space between buttons */
+    justify-content: center; /* Centers the button group */
+    gap: 12px; /* Little more space between circles */
+    flex-wrap: wrap;
+    padding-right: 0;
   }
 
-  /* Force buttons to look normal (Undo any fancy circle styles) */
+  /* --- 3. CIRCLE BUTTONS (From You) --- */
+  /* This turns the buttons back into circles */
   .nav-btn, 
   .share-btn-gradient,
   .history-btn,
   .logout-btn, 
-  .login-btn {
-    width: auto !important; /* Natural width */
-    height: auto !important; /* Natural height */
-    padding: 10px 16px !important;
-    border-radius: 8px !important;
-    font-size: 14px !important; /* Text is visible again */
-    display: flex !important;
-    align-items: center;
+  .login-btn,
+  .theme-btn {
+    font-size: 0 !important; /* Hides the text */
+    padding: 0 !important;
+    width: 42px !important;  /* Slightly bigger for easier tapping */
+    height: 42px !important;
+    display: flex;
     justify-content: center;
+    align-items: center;
+    border-radius: 50% !important; /* Makes them round */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
   }
 
-  /* Ensure Icons are visible */
+  /* Fix Theme Button Visibility */
+  .theme-btn {
+    border: 1px solid var(--border-color) !important;
+    background-color: var(--panel-bg-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Make Icons Visible & Centered */
   .nav-btn svg, 
-  .share-btn-gradient svg {
-    font-size: 16px !important;
-    margin-right: 6px !important; /* Space between icon and text */
+  .share-btn-gradient svg, 
+  .history-btn svg,
+  .logout-btn svg, 
+  .login-btn svg,
+  .theme-btn svg {
+    font-size: 18px !important; /* Good icon size */
+    margin: 0 !important;
   }
 
-  /* 6. FOOTER ADJUSTMENT */
+  /* Profile Pic */
+  .profile-pic {
+    width: 42px;
+    height: 42px;
+    border-width: 2px;
+  }
+
+  /* Footer */
   .App-footer {
-    margin-top: 30px !important;
+    margin-top: 40px !important;
     padding-bottom: 30px;
-    position: relative;
   }
 }
