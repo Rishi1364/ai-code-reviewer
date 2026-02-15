@@ -92,8 +92,8 @@ Follow these simple steps to set up the project on your machine.
 
 ### **1. Clone the Repository**
 ```bash
-git clone [https://github.com/Rishi1364/ai-code-reviewer.git](https://github.com/Rishi1364/ai-code-reviewer.git)
-cd ai-code-reviewer
+git clone https://github.com/Rishi1364/ai-code-reviewer.git
+
 ```
 
 **2.Configure the Backend**
