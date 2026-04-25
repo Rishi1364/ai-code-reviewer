@@ -372,8 +372,10 @@ function App() {
       </header>
 
       <main className="main-content">
-        <div className="panel">
-          <h2 className="panel-title">
+        
+        {/* 🛠️ FIX 1: Added overflowY: 'auto' so the entire left side can scroll! */}
+        <div className="panel" style={{ overflowY: 'auto', paddingBottom: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <h2 className="panel-title" style={{ margin: '0' }}>
             <FaCode /> Code Input
           </h2>
 
@@ -408,10 +410,11 @@ function App() {
             </div>
           </div>
 
+          {/* 🛠️ FIX 2: Added minHeight so the editor doesn't shrink to zero when the terminal appears */}
           <div
             className="code-editor-container"
             style={{
-              height: "100%",
+              minHeight: "350px", 
               width: "100%",
               borderRadius: "8px",
               overflow: "hidden",
@@ -434,7 +437,8 @@ function App() {
             />
           </div>
 
-          <div className="button-group">
+          {/* 🛠️ FIX 3: Added flexWrap so the buttons don't get squeezed */}
+          <div className="button-group" style={{ flexWrap: 'wrap' }}>
             <button
               onClick={() =>
                 handleApiRequest("review", { code }, "review", (data) =>
@@ -505,20 +509,26 @@ function App() {
             </button>
           </div>
 
-          {/* --- NEW: TERMINAL OUTPUT PANEL --- */}
+          {/* 🛠️ FIX 4: Bulletproof Terminal Box with internal scrolling */}
           {runOutput && (
-            <div className="panel" style={{ marginTop: '20px', borderLeft: '4px solid #38ef7d', padding: '15px' }}>
+            <div style={{ marginTop: '10px', borderLeft: '4px solid #38ef7d', padding: '15px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
                 <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: 'var(--text-color)' }}>🖥️ Terminal Output</h3>
-                <pre style={{ 
+                <div style={{ 
+                    maxHeight: '200px', 
+                    overflowY: 'auto', 
                     background: '#0D0B1A', 
-                    padding: '15px', 
-                    borderRadius: '5px', 
-                    color: '#E0E0E0',
-                    whiteSpace: 'pre-wrap',
-                    fontFamily: "'Fira Code', 'Courier New', monospace"
+                    borderRadius: '5px' 
                 }}>
-                    {runOutput}
-                </pre>
+                    <pre style={{ 
+                        margin: 0, 
+                        padding: '15px', 
+                        color: '#E0E0E0',
+                        whiteSpace: 'pre-wrap',
+                        fontFamily: "'Fira Code', 'Courier New', monospace"
+                    }}>
+                        {runOutput}
+                    </pre>
+                </div>
             </div>
           )}
 
