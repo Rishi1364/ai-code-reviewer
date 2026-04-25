@@ -166,6 +166,55 @@ app.post('/convert', async (req, res) => {
     }
 });
 
+// --- API Endpoint: /run (NEW COMPILER FEATURE) ---
+app.post('/run', async (req, res) => {
+    try {
+        const { code, language } = req.body;
+        if (!code || !language) {
+            return res.status(400).json({ error: 'Code and language are required.' });
+        }
+
+        // Map your frontend languages to Piston API requirements
+        const languageMap = {
+            'JavaScript': { language: 'javascript', version: '18.15.0' },
+            'Python': { language: 'python', version: '3.10.0' },
+            'Java': { language: 'java', version: '15.0.2' }
+        };
+
+        const targetLang = languageMap[language];
+
+        if (!targetLang) {
+            return res.status(400).json({ error: 'Language not supported for compiling.' });
+        }
+
+        // Send the code to the safe Piston API Sandbox
+        const response = await fetch('https://emacs.piston.rs/api/v2/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                language: targetLang.language,
+                version: targetLang.version,
+                files: [{ content: code }]
+            })
+        });
+
+        const data = await response.json();
+        
+        // Handle runtime errors vs successful compilation
+        if (data.run && data.run.stderr) {
+            res.json({ output: data.run.stderr, isError: true });
+        } else if (data.run && data.run.stdout !== undefined) {
+            res.json({ output: data.run.stdout, isError: false });
+        } else {
+            res.json({ output: "Compilation finished with no output.", isError: false });
+        }
+
+    } catch (error) {
+        console.error("Error in /run:", error);
+        res.status(500).json({ error: 'Failed to compile and run code.' });
+    }
+});
+
 // --- Start server ---
 app.listen(port, () => {
     console.log(`Server is running on port: ${port}`);
