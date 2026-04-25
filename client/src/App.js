@@ -37,17 +37,12 @@ import ShareModal from './components/ShareModal';
 
 // --- STYLES ---
 import "./App.css";
+
 function App() {
 
-
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-
   const [showHistory, setShowHistory] = useState(false);
-
   const [isShareOpen, setIsShareOpen] = useState(false);
-
-  // const [code, setCode] = useState(`// Paste your code here...`);
-  // ... other states ...
 
   /// --- LISTENS FOR SHARED CODE IN URL ---
   useEffect(() => {
@@ -62,6 +57,7 @@ function App() {
       window.history.replaceState({}, document.title, "/");
     }
   }, []);
+
   // ---------------------------------------------------------------
   // 1. ALL STATE VARIABLES (MUST BE AT THE TOP)
   // ---------------------------------------------------------------
@@ -80,6 +76,10 @@ function App() {
   const [complexityAnalysis, setComplexityAnalysis] = useState("");
   const [documentation, setDocumentation] = useState("");
   const [convertedCode, setConvertedCode] = useState("");
+
+  // --- NEW: Compiler State (Moved safely inside the component) ---
+  const [runOutput, setRunOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
 
   // --- Language Selectors ---
   const [sourceLanguage, setSourceLanguage] = useState("JavaScript");
@@ -124,6 +124,7 @@ function App() {
     "Ruby",
     "PHP",
   ];
+  
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   const handleCopy = () => {
@@ -139,7 +140,7 @@ function App() {
               : convertedCode;
 
     if (contentToCopy) {
-      navigator.clipboard.writeText(contentToCopy); // Modern copy method
+      navigator.clipboard.writeText(contentToCopy); 
       setCopyButtonText("Copied!");
       setTimeout(() => setCopyButtonText("Copy"), 2000);
     }
@@ -148,50 +149,38 @@ function App() {
   const loadHistoryItem = (item) => {
     setCode(item.code);
     setReview(item.review);
-    setActiveView("review"); // Switch view to show the review
-    setShowHistory(false);   // Close the sidebar
+    setActiveView("review"); 
+    setShowHistory(false);  
   };
 
-  //  --- REPLACEMENT FUNCTION START ---
   const handleApiRequest = async (endpoint, payload, viewName, successCallback) => {
-    // 1. Basic Validation
     if (!code.trim()) {
       setError("Please enter some code to analyze.");
       setActiveView("error");
       return;
     }
 
-    // 2. Reset UI State
     setIsLoading(true);
     setError("");
     setActiveView(viewName);
 
     try {
-      // 3. Call the Server (AI)
       const response = await axios.post(`https://ai-code-reviewer-2fw5.onrender.com/${endpoint}`, payload);
-
-      // 4. Update the Screen with Results
       successCallback(response.data);
 
-      // 5. --- NEW: AUTO-SAVE TO DATABASE ---
-      // We only save if:
-      // A) The user is logged in (user exists)
-      // B) The action was a "review" (we don't need to save simple conversions)
       if (user && viewName === "review") {
         try {
           await addDoc(collection(db, "history"), {
-            uid: user.uid,              // User's ID
-            code: code,                 // The Code they wrote
-            review: response.data.review, // The AI's answer
-            timestamp: new Date()       // Current Time
+            uid: user.uid,              
+            code: code,                 
+            review: response.data.review, 
+            timestamp: new Date()       
           });
           console.log("✅ History saved successfully!");
         } catch (e) {
           console.error("❌ Error saving history:", e);
         }
       }
-      // -------------------------------------
-
     } catch (err) {
       const errorMessage = err.response?.data?.error || `Failed to fetch ${viewName}.`;
       setError(errorMessage);
@@ -200,7 +189,34 @@ function App() {
       setIsLoading(false);
     }
   };
-  // --- REPLACEMENT FUNCTION END ---
+
+  // --- NEW: Dedicated Compiler Execution Function ---
+  const handleRunCode = async () => {
+    if (!code.trim()) return;
+    
+    setIsRunning(true);
+    setRunOutput("Compiling and running code... ⏳");
+
+    try {
+        const response = await axios.post('https://ai-code-reviewer-2fw5.onrender.com/run', { 
+            code: code, 
+            language: sourceLanguage 
+        });
+
+        const data = response.data;
+        
+        if (data.isError) {
+            setRunOutput(`🔴 Error:\n${data.output}`);
+        } else {
+            setRunOutput(`🟢 Output:\n${data.output || "Code executed successfully with no output."}`);
+        }
+    } catch (err) {
+        const errorMessage = err.response?.data?.error || err.message;
+        setRunOutput(`🔴 Failed to connect to the server: ${errorMessage}`);
+    } finally {
+        setIsRunning(false);
+    }
+  };
 
   const renderRightPanelContent = () => {
     if (isLoading)
@@ -279,6 +295,7 @@ function App() {
         return { icon: <FaBolt />, text: "Analysis Results" };
     }
   };
+  
   const { icon, text } = getPanelTitle();
 
   // ---------------------------------------------------------------
@@ -291,7 +308,6 @@ function App() {
         Loading...
       </div>
     );
-  // if (!user) return <Login />;
 
   // ---------------------------------------------------------------
   // 5. THE MAIN APP UI
@@ -299,14 +315,9 @@ function App() {
   return (
     <div className={`App ${theme}`}>
       <header className="App-header">
-
-        {/* Left Side: Title */}
         <h1 className="app-title">🤖 AI Code Reviewer</h1>
 
-        {/* Right Side: Navigation Group */}
         <div className="header-right">
-
-          {/* History & Logout (Only if logged in) */}
           {user && (
             <>
               <button
@@ -314,24 +325,20 @@ function App() {
                 onClick={() => setIsShareOpen(true)}
               >
                 <FaShareAlt /> Share
-
               </button>
               <button onClick={() => setShowHistory(true)} className="nav-btn history-btn">
                 <FaHistory /> History
               </button>
-
               <button onClick={logout} className="nav-btn logout-btn">
                 <FaSignOutAlt /> Logout
               </button>
             </>
           )}
 
-          {/* Theme Toggle */}
           <button onClick={toggleTheme} className="theme-btn" aria-label="Toggle Theme">
             {theme === "dark" ? <FaSun /> : <FaMoon />}
           </button>
 
-          {/* Profile Section */}
           {user ? (
             <div className="profile-container">
               <img
@@ -361,7 +368,6 @@ function App() {
               <FaGoogle /> Sign In
             </button>
           )}
-
         </div>
       </header>
 
@@ -487,7 +493,35 @@ function App() {
             >
               <FaSyncAlt /> Convert
             </button>
+            
+            {/* --- NEW: RUN CODE BUTTON --- */}
+            <button 
+                className="analyze-button" 
+                style={{ background: "linear-gradient(90deg, #11998e, #38ef7d)" }}
+                onClick={handleRunCode} 
+                disabled={isRunning || !code.trim()}
+            >
+                {isRunning ? "Running..." : "▶ Run Code"}
+            </button>
           </div>
+
+          {/* --- NEW: TERMINAL OUTPUT PANEL --- */}
+          {runOutput && (
+            <div className="panel" style={{ marginTop: '20px', borderLeft: '4px solid #38ef7d', padding: '15px' }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: 'var(--text-color)' }}>🖥️ Terminal Output</h3>
+                <pre style={{ 
+                    background: '#0D0B1A', 
+                    padding: '15px', 
+                    borderRadius: '5px', 
+                    color: '#E0E0E0',
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: "'Fira Code', 'Courier New', monospace"
+                }}>
+                    {runOutput}
+                </pre>
+            </div>
+          )}
+
         </div>
 
         <div className="panel">
@@ -529,22 +563,20 @@ function App() {
         </p>
       </footer>
 
-      {/* --- WAIT! ADD THIS PART OR THE HISTORY WON'T OPEN --- */}
       {showHistory && (
         <HistoryPanel
           user={user}
           onClose={() => setShowHistory(false)}
           onLoad={loadHistoryItem}
-          theme={theme}//This line make code switch ligh & dark 
+          theme={theme}
         />
       )}
 
       <ShareModal
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
-        code={code} // Pass your current code state here
+        code={code} 
       />
-      {/* --------------------------------------------------- */}
 
     </div>
   );

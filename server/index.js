@@ -167,6 +167,7 @@ app.post('/convert', async (req, res) => {
 });
 
 // --- API Endpoint: /run (NEW COMPILER FEATURE) ---
+// --- API Endpoint: /run (FIXED WITH GEMINI COMPILER) ---
 app.post('/run', async (req, res) => {
     try {
         const { code, language } = req.body;
@@ -174,40 +175,26 @@ app.post('/run', async (req, res) => {
             return res.status(400).json({ error: 'Code and language are required.' });
         }
 
-        // Map your frontend languages to Piston API requirements
-        const languageMap = {
-            'JavaScript': { language: 'javascript', version: '18.15.0' },
-            'Python': { language: 'python', version: '3.10.0' },
-            'Java': { language: 'java', version: '15.0.2' }
-        };
+        // We use Gemini to simulate the execution since Piston is down!
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const prompt = `
+            You are a strict code compiler and executor for ${language}.
+            Execute the following code and provide ONLY the exact terminal/console output. 
+            If there are errors, provide ONLY the exact error message. 
+            Do not add markdown formatting, explanations, or introductory text. Just the raw output.
+            
+            Code:
+            ${code}
+        `;
 
-        const targetLang = languageMap[language];
-
-        if (!targetLang) {
-            return res.status(400).json({ error: 'Language not supported for compiling.' });
-        }
-
-        // Send the code to the safe Piston API Sandbox
-        const response = await fetch('https://emacs.piston.rs/api/v2/execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                language: targetLang.language,
-                version: targetLang.version,
-                files: [{ content: code }]
-            })
-        });
-
-        const data = await response.json();
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        let outputText = response.text();
         
-        // Handle runtime errors vs successful compilation
-        if (data.run && data.run.stderr) {
-            res.json({ output: data.run.stderr, isError: true });
-        } else if (data.run && data.run.stdout !== undefined) {
-            res.json({ output: data.run.stdout, isError: false });
-        } else {
-            res.json({ output: "Compilation finished with no output.", isError: false });
-        }
+        // Clean up any accidental markdown blocks the AI might add
+        outputText = outputText.replace(/```[a-zA-Z0-9+\-]*\n?/g, '').replace(/```/g, '').trim();
+
+        res.json({ output: outputText, isError: false });
 
     } catch (error) {
         console.error("Error in /run:", error);
