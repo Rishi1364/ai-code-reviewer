@@ -26,13 +26,14 @@ app.get('/', (req, res) => {
     res.send('AI Code Reviewer Backend is Running! 🚀');
 });
 
-// --- API Endpoint: /review (Fixed: Removed '/api') ---
+// --- API Endpoint: /review ---
 app.post('/review', async (req, res) => {
     try {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: 'Code is required.' });
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // 🛠️ FIXED: Using the stable 1.5 model
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
         const prompt = `
             🧑‍💻 Please act as an expert code reviewer.
             Analyze the following code snippet and provide structured feedback using markdown formatting.
@@ -60,13 +61,14 @@ app.post('/review', async (req, res) => {
     }
 });
 
-// --- API Endpoint: /fix (Fixed: Removed '/api') ---
+// --- API Endpoint: /fix ---
 app.post('/fix', async (req, res) => {
     try {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: 'Code is required.' });
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // 🛠️ FIXED: Using the stable 1.5 model
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
         const prompt = `
             Act as an expert programmer. Fix bugs in this code.
             Response ONLY with the corrected code in a single markdown block.
@@ -78,7 +80,8 @@ app.post('/fix', async (req, res) => {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         let fixedCodeText = response.text();
-        const cleanedCode = fixedCodeText.replace(/```[a-zA-Z0-9+\-]*\n?/g, '').replace(/```/g, '').trim();
+        const cleanedCode = fixedCodeText.replace(/```[a-zA-Z0-9+\-]*\n?/g, '').replace(/
+```/g, '').trim();
         res.json({ fixedCode: cleanedCode });
 
     } catch (error) {
@@ -87,13 +90,14 @@ app.post('/fix', async (req, res) => {
     }
 });
 
-// --- API Endpoint: /complexity (Fixed: Removed '/api') ---
+// --- API Endpoint: /complexity ---
 app.post('/complexity', async (req, res) => {
     try {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: 'Code is required.' });
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // 🛠️ FIXED: Using the stable 1.5 model
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
         const prompt = `
             Analyze time and space complexity of this code in markdown format.
             \`\`\`
@@ -112,13 +116,14 @@ app.post('/complexity', async (req, res) => {
     }
 });
 
-// --- API Endpoint: /document (Fixed: Removed '/api') ---
+// --- API Endpoint: /document ---
 app.post('/document', async (req, res) => {
     try {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: 'Code is required.' });
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // 🛠️ FIXED: Using the stable 1.5 model
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
         const prompt = `
             Generate clean markdown documentation for this code.
             \`\`\`
@@ -137,7 +142,7 @@ app.post('/document', async (req, res) => {
     }
 });
 
-// --- API Endpoint: /convert (Fixed: Removed '/api') ---
+// --- API Endpoint: /convert ---
 app.post('/convert', async (req, res) => {
     try {
         const { code, sourceLanguage, targetLanguage } = req.body;
@@ -145,7 +150,8 @@ app.post('/convert', async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields.' });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // 🛠️ FIXED: Using the stable 1.5 model
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
         const prompt = `
             Convert this ${sourceLanguage} code to ${targetLanguage}.
             Respond ONLY with code.
@@ -166,7 +172,6 @@ app.post('/convert', async (req, res) => {
     }
 });
 
-// --- API Endpoint: /run (NEW COMPILER FEATURE) ---
 // --- API Endpoint: /run (FIXED WITH GEMINI COMPILER) ---
 app.post('/run', async (req, res) => {
     try {
@@ -175,8 +180,8 @@ app.post('/run', async (req, res) => {
             return res.status(400).json({ error: 'Code and language are required.' });
         }
 
-        // We use Gemini to simulate the execution since Piston is down!
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // 🛠️ FIXED: We use stable Gemini 1.5 to simulate the execution
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
         const prompt = `
             You are a strict code compiler and executor for ${language}.
             Execute the following code and provide ONLY the exact terminal/console output. 
@@ -192,7 +197,8 @@ app.post('/run', async (req, res) => {
         let outputText = response.text();
         
         // Clean up any accidental markdown blocks the AI might add
-        outputText = outputText.replace(/```[a-zA-Z0-9+\-]*\n?/g, '').replace(/```/g, '').trim();
+        outputText = outputText.replace(/```[a-zA-Z0-9+\-]*\n?/g, '').replace(/
+```/g, '').trim();
 
         res.json({ output: outputText, isError: false });
 
