@@ -315,7 +315,7 @@ function App() {
   return (
     <div className={`App ${theme}`}>
       <header className="App-header">
-        <h1 className="app-title">🤖 AI Code Reviewer</h1>
+        <h1 className="app-title">🤖 Bug Hunter </h1>
 
         <div className="header-right">
           {user && (
